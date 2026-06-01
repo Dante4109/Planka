@@ -145,6 +145,70 @@ pt docker reset-password --username r3zadmin --password "NewPassword123"
 
 ---
 
+## `pt api` — API Queries
+
+Talks directly to the Planka REST API. Reads credentials from `.env`.
+
+### Setup — API credentials
+
+Add one of the following to your `.env` file (see `.env.example` for reference):
+
+```dotenv
+# Option 1 — API key (preferred, no expiry)
+# Create in Planka → click your avatar → Edit profile → API keys → Add API key
+PLANKA_API_KEY=your_key_here
+
+# Option 2 — Username + password (Bearer JWT)
+PLANKA_USERNAME=r3zadmin
+PLANKA_PASSWORD=your_password_here
+```
+
+---
+
+### `pt api ping`
+Test the API connection and show the authenticated user.
+
+```powershell
+pt api ping
+# Connected as: Roger Zeller (r3zadmin)
+# Role: admin
+```
+
+---
+
+### `pt api list-projects`
+List all projects visible to the authenticated user.
+
+```powershell
+pt api list-projects
+#   [1357158568008091264] My Project
+#   [1357158568008091265] Another Project
+```
+
+---
+
+### `pt api list-boards`
+List all boards in a project (use the ID from `list-projects`).
+
+```powershell
+pt api list-boards 1357158568008091264
+#   [1357158568008091300] Main Board
+#   [1357158568008091301] Archive
+```
+
+---
+
+### `pt api list-cards`
+List all cards on a board, with due dates where set.
+
+```powershell
+pt api list-cards 1357158568008091300
+#   [1357158568008091400] Fix login bug | due: 2026-06-15
+#   [1357158568008091401] Update README
+```
+
+---
+
 ## `pt scheduler` — Automation Schedules
 
 > 🚧 Scheduler commands are stubs pending Phase 5 implementation (APScheduler integration).
