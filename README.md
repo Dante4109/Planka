@@ -2,6 +2,8 @@
 
 Planka is an open-source kanban board deployed via Docker, connecting to a local PostgreSQL 16 instance.
 
+> 📋 **CLI command reference:** See [COMMANDS.md](COMMANDS.md) for all `pt` commands (start, stop, backup, reset-password, etc.).
+
 ## Prerequisites
 - Docker Desktop 27.1+ running
 - PostgreSQL 16 running (Windows service: `postgresql-x64-16`)
