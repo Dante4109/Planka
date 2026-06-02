@@ -24,7 +24,10 @@ pt --help
 
 ```
 pt docker     Manage the Planka Docker container
+pt api        Query the Planka API
+pt automation Run card automation rules
 pt scheduler  Run and manage card automation schedules
+pt webhook    Manage the Planka webhook receiver
 ```
 
 ---
@@ -209,9 +212,24 @@ pt api list-cards 1357158568008091300
 
 ---
 
-## `pt scheduler` — Automation Schedules
+## `pt automation` — Card Automations
 
-> 🚧 Scheduler commands are stubs pending Phase 5 implementation (APScheduler integration).
+### `pt automation sync-points`
+Recompute list point totals on a board and update list titles immediately.
+
+```powershell
+# Update list titles live
+pt automation sync-points 1784419684444013580
+
+# Preview changes without writing anything
+pt automation sync-points 1784419684444013580 --dry-run
+```
+
+---
+
+## `pt scheduler` — Automation Schedules (polling fallback)
+
+The scheduler uses APScheduler to poll Planka on a configurable interval. Use this as a fallback if the webhook server is not running.
 
 ### `pt scheduler run`
 Start the automation scheduler (runs all configured card rules on their schedules).
@@ -225,6 +243,93 @@ List all configured automation schedules.
 
 ```powershell
 pt scheduler list
+```
+
+---
+
+## `pt webhook` — Webhook Receiver
+
+Event-driven alternative to the polling scheduler. A lightweight Flask server receives Planka events and updates list titles instantly.
+
+### Quick setup
+
+1. Add `PLANKA_WEBHOOK_TOKEN` to your `.env` (generate a random secret).
+2. Start the full stack:
+   ```powershell
+   pt docker start
+   ```
+   This brings up both Planka and the `planka-webhook` sidecar container.
+3. Register the webhook URL with Planka (one-time):
+   ```powershell
+   pt webhook register
+   ```
+
+### `pt webhook start`
+Start the webhook receiver server in the **foreground** (for local testing outside Docker).
+
+```powershell
+pt webhook start
+
+# Override the port
+pt webhook start --port 5002
+
+# Enable Flask debug mode
+pt webhook start --debug
+```
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--port` | `-p` | `PLANKA_WEBHOOK_PORT` / `5001` | Port to listen on |
+| `--debug` | | off | Flask debug mode |
+
+> ℹ️ In production, the webhook server runs automatically as the `planka-webhook` Docker service. `pt webhook start` is for local development only.
+
+---
+
+### `pt webhook register`
+Register the webhook URL with Planka so it starts sending events.
+
+```powershell
+# Register with defaults (points to planka-webhook container, all relevant events)
+pt webhook register
+
+# Custom URL (e.g., ngrok tunnel for testing)
+pt webhook register --url https://abc123.ngrok.io/webhook
+
+# Custom name
+pt webhook register --name my-automation
+```
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--url` | `-u` | `http://planka-webhook:5001/webhook` | Webhook receiver URL |
+| `--name` | `-n` | `planka-tools` | Display name in Planka |
+| `--events` | `-e` | see below | Comma-separated event list |
+
+**Default events subscribed:**
+```
+customFieldValueUpdate,customFieldValueDelete,cardUpdate,cardDelete
+```
+
+---
+
+### `pt webhook list`
+List all webhooks registered in Planka.
+
+```powershell
+pt webhook list
+#   [1234567890] planka-tools
+#        URL: http://planka-webhook:5001/webhook
+#     Events: customFieldValueUpdate,customFieldValueDelete,cardUpdate,cardDelete
+```
+
+---
+
+### `pt webhook delete`
+Remove a webhook registration from Planka.
+
+```powershell
+pt webhook delete 1234567890
 ```
 
 ---

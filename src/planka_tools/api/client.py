@@ -71,7 +71,15 @@ class PlankaClient:
         username: Optional[str] = None,
         password: Optional[str] = None,
     ):
-        self.base_url = (base_url or _load_env("BASE_URL") or "").rstrip("/")
+        # PLANKA_INTERNAL_URL takes precedence when running inside Docker
+        # (container-to-container DNS), falling back to BASE_URL for host use.
+        resolved = (
+            base_url
+            or _load_env("PLANKA_INTERNAL_URL")
+            or _load_env("BASE_URL")
+            or ""
+        )
+        self.base_url = resolved.rstrip("/")
         self._api_key = api_key or _load_env("PLANKA_API_KEY")
         self._username = username or _load_env("PLANKA_USERNAME")
         self._password = password or _load_env("PLANKA_PASSWORD")
@@ -304,6 +312,30 @@ class PlankaClient:
 
     def mark_notifications_read(self) -> None:
         self._post("/api/notifications/read-all", json={})
+
+    # ------------------------------------------------------------------
+    # Webhooks
+    # ------------------------------------------------------------------
+
+    def get_webhooks(self) -> list[dict]:
+        """Return all webhooks registered in this Planka instance."""
+        return self._get("/api/webhooks")["items"]
+
+    def create_webhook(
+        self,
+        name: str,
+        url: str,
+        events: str = "customFieldValueUpdate,customFieldValueDelete,cardUpdate,cardDelete",
+        access_token: Optional[str] = None,
+    ) -> dict:
+        """Register a new webhook. events is a comma-separated string."""
+        payload: dict[str, Any] = {"name": name, "url": url, "events": events}
+        if access_token:
+            payload["accessToken"] = access_token
+        return self._post("/api/webhooks", json=payload)["item"]
+
+    def delete_webhook(self, webhook_id: str) -> dict:
+        return self._delete(f"/api/webhooks/{webhook_id}")["item"]
 
     # ------------------------------------------------------------------
     # Convenience helpers

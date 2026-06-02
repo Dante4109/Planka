@@ -21,7 +21,30 @@ services:
       retries: 3
       start_period: 30s
 
+  planka-webhook:
+    build: .
+    container_name: planka-webhook
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    environment:
+      # Override BASE_URL with the Docker-internal address so the webhook container
+      # can reach the Planka API without going through the host network.
+      - PLANKA_INTERNAL_URL=http://planka:1337
+    depends_on:
+      planka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
 volumes:
   planka_user_avatars:
   planka_project_backgrounds:
   planka_attachments:
+
