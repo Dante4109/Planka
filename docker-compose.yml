@@ -34,8 +34,7 @@ services:
       # can reach the Planka API without going through the host network.
       - PLANKA_INTERNAL_URL=http://planka:1337
     depends_on:
-      planka:
-        condition: service_healthy
+      - planka
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/health')\""]
       interval: 30s
