@@ -41,8 +41,7 @@ def list_boards(project_id: str = typer.Argument(..., help="Project ID")):
     """List all boards in a project."""
     try:
         with PlankaClient() as client:
-            project = client.get_project(project_id)
-            boards = project.get("included", {}).get("boards", [])
+            boards = client.get_project_boards(project_id)
             if not boards:
                 typer.echo("No boards found.")
                 return

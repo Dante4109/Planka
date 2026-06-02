@@ -132,6 +132,11 @@ class PlankaClient:
         """Return a single project by ID (includes boards)."""
         return self._get(f"/api/projects/{project_id}")["item"]
 
+    def get_project_boards(self, project_id: str) -> list[dict]:
+        """Return all boards in a project."""
+        resp = self._get(f"/api/projects/{project_id}")
+        return resp.get("included", {}).get("boards", [])
+
     def create_project(self, name: str, background_type: str = "gradient",
                        background_name: str = "ocean-dive") -> dict:
         return self._post("/api/projects", json={
@@ -172,8 +177,8 @@ class PlankaClient:
     # ------------------------------------------------------------------
 
     def get_lists(self, board_id: str) -> list[dict]:
-        """Return all lists on a board (included in get_board response)."""
-        return self._get(f"/api/boards/{board_id}")["included"]["lists"]
+        """Return all lists on a board."""
+        return self._get(f"/api/boards/{board_id}").get("included", {}).get("lists", [])
 
     def create_list(self, board_id: str, name: str, position: float = 65536.0) -> dict:
         return self._post(f"/api/boards/{board_id}/lists",
@@ -190,8 +195,8 @@ class PlankaClient:
     # ------------------------------------------------------------------
 
     def get_cards(self, board_id: str) -> list[dict]:
-        """Return all cards on a board."""
-        return self._get(f"/api/boards/{board_id}/cards")["items"]
+        """Return all cards on a board (via board included payload)."""
+        return self._get(f"/api/boards/{board_id}").get("included", {}).get("cards", [])
 
     def get_card(self, card_id: str) -> dict:
         return self._get(f"/api/cards/{card_id}")["item"]
@@ -225,7 +230,7 @@ class PlankaClient:
     # ------------------------------------------------------------------
 
     def get_labels(self, board_id: str) -> list[dict]:
-        return self._get(f"/api/boards/{board_id}")["included"]["labels"]
+        return self._get(f"/api/boards/{board_id}").get("included", {}).get("labels", [])
 
     def create_label(self, board_id: str, name: str, color: str = "berry-red") -> dict:
         return self._post(f"/api/boards/{board_id}/labels",
@@ -310,9 +315,7 @@ class PlankaClient:
 
     def find_board(self, project_id: str, name: str) -> Optional[dict]:
         """Return the first board in a project matching the given name, or None."""
-        project = self.get_project(project_id)
-        boards = project.get("included", {}).get("boards", [])
-        return next((b for b in boards if b["name"] == name), None)
+        return next((b for b in self.get_project_boards(project_id) if b["name"] == name), None)
 
     def find_list(self, board_id: str, name: str) -> Optional[dict]:
         """Return the first list on a board matching the given name, or None."""
@@ -331,13 +334,17 @@ class PlankaClient:
 
     def _raise_for_status(self, response: requests.Response) -> dict:
         if response.ok:
-            if not response.content:
+            if not response.content or not response.content.strip():
                 return {}
-            return response.json()
+            try:
+                return response.json()
+            except Exception:
+                return {}
         try:
             body = response.json()
-            error_code = body.get("error", {}).get("type", "E_UNKNOWN")
-            message = body.get("error", {}).get("message", response.text)
+            # Planka error format: {"code": "E_NOT_FOUND", "message": "..."}
+            error_code = body.get("code", body.get("error", {}).get("type", "E_UNKNOWN"))
+            message = body.get("message", body.get("error", {}).get("message", response.text))
         except Exception:
             error_code = "E_UNKNOWN"
             message = response.text
