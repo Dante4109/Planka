@@ -2,6 +2,7 @@ import typer
 from planka_tools.docker import commands as docker_commands
 from planka_tools.scheduler import commands as scheduler_commands
 from planka_tools.api import commands as api_commands
+from planka_tools.automations import commands as automation_commands
 
 app = typer.Typer(
     name="pt",
@@ -11,6 +12,7 @@ app = typer.Typer(
 
 app.add_typer(docker_commands.app, name="docker", help="Manage the Planka Docker container.")
 app.add_typer(api_commands.app, name="api", help="Query the Planka API.")
+app.add_typer(automation_commands.app, name="automation", help="Run card automation rules.")
 app.add_typer(scheduler_commands.app, name="scheduler", help="Run and manage card automation schedules.")
 
 
