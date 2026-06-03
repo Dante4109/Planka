@@ -4,6 +4,7 @@ from planka_tools.scheduler import commands as scheduler_commands
 from planka_tools.api import commands as api_commands
 from planka_tools.automations import commands as automation_commands
 from planka_tools.webhook import commands as webhook_commands
+from planka_tools.export import commands as export_commands
 
 app = typer.Typer(
     name="pt",
@@ -16,6 +17,7 @@ app.add_typer(api_commands.app, name="api", help="Query the Planka API.")
 app.add_typer(automation_commands.app, name="automation", help="Run card automation rules.")
 app.add_typer(scheduler_commands.app, name="scheduler", help="Run and manage card automation schedules.")
 app.add_typer(webhook_commands.app, name="webhook", help="Manage the Planka webhook receiver.")
+app.add_typer(export_commands.app, name="export", help="Export board data to JSON.")
 
 
 def main():
