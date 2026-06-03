@@ -18,6 +18,22 @@ app.add_typer(automation_commands.app, name="automation", help="Run card automat
 app.add_typer(scheduler_commands.app, name="scheduler", help="Run and manage card automation schedules.")
 app.add_typer(webhook_commands.app, name="webhook", help="Manage the Planka webhook receiver.")
 app.add_typer(export_commands.app, name="export", help="Export board data to JSON.")
+from planka_tools.board import commands as board_commands
+app.add_typer(board_commands.app, name="board", help="Create or update boards from JSON templates.")
+
+
+# Top-level aliases matching requested names
+@app.command(name="CreateBoard")
+def CreateBoard(project: str = typer.Option(..., "--Project", "-P", help="Project ID"), import_file: Path = typer.Option(..., "--Import", "-I", exists=True, help="JSON file to import")):
+    """Alias: create a board from a JSON template (matches PT CreateBoard syntax)"""
+    return board_commands.create_board(project=project, import_file=import_file)
+
+
+@app.command(name="UpdateBoard")
+def UpdateBoard(board: str = typer.Option(..., "--Board", "-B", help="Board ID"), import_file: Path = typer.Option(..., "--Import", "-I", exists=True, help="JSON file to import")):
+    """Alias: update an existing board from a JSON template (matches PT UpdateBoard syntax)"""
+    return board_commands.update_board(board=board, import_file=import_file)
+
 
 
 def main():
