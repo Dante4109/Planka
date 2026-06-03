@@ -18,10 +18,10 @@ import typer
 
 from planka_tools.api.client import PlankaClient, PlankaError
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(invoke_without_command=True, no_args_is_help=True, help="Export board data to JSON")
 
 
-@app.command(name="export")
+@app.callback(invoke_without_command=True)
 def export_board(
     board: str = typer.Option(..., "--board", "-b", help="Board ID to export"),
     cards: bool = typer.Option(False, "--cards", "-c", help="Include cards in the export"),
