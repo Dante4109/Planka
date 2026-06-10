@@ -49,7 +49,35 @@ def export_board(
     }
 
     if cards:
-        result["cards"] = included.get("cards", [])
+        # Build label lookup by id for embedding names
+        label_by_id = {lbl["id"]: lbl for lbl in included.get("labels", [])}
+
+        # Index cardLabels by cardId
+        card_label_ids: dict = {}
+        for cl in included.get("cardLabels", []):
+            card_label_ids.setdefault(cl["cardId"], []).append(cl["labelId"])
+
+        # Index customFieldValues by cardId
+        card_field_values: dict = {}
+        for fv in included.get("customFieldValues", []):
+            card_field_values.setdefault(fv["cardId"], []).append({
+                "customFieldGroupId": fv["customFieldGroupId"],
+                "customFieldId": fv["customFieldId"],
+                "content": fv["content"],
+            })
+
+        # Embed labelIds, labelNames, and customFieldValues into each card object
+        enriched_cards = []
+        for card in included.get("cards", []):
+            c = dict(card)
+            lids = card_label_ids.get(card["id"], [])
+            c["labelIds"] = lids
+            c["labelNames"] = [label_by_id[lid]["name"] for lid in lids if lid in label_by_id]
+            c["customFieldValues"] = card_field_values.get(card["id"], [])
+            enriched_cards.append(c)
+
+        result["cards"] = enriched_cards
+        result["cardLabels"] = included.get("cardLabels", [])
 
     # Determine output filename
     if output:

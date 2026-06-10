@@ -210,8 +210,8 @@ class PlankaClient:
         return self._get(f"/api/cards/{card_id}")["item"]
 
     def create_card(self, list_id: str, name: str, position: float = 65536.0,
-                    description: Optional[str] = None, due_date: Optional[str] = None) -> dict:
-        payload: dict[str, Any] = {"name": name, "listId": list_id, "position": position}
+                    description: Optional[str] = None, due_date: Optional[str] = None, card_type: str = "project") -> dict:
+        payload: dict[str, Any] = {"name": name, "listId": list_id, "position": position, "type": card_type}
         if description:
             payload["description"] = description
         if due_date:
@@ -245,10 +245,18 @@ class PlankaClient:
                           json={"name": name, "color": color, "position": 65536.0})["item"]
 
     def add_label_to_card(self, card_id: str, label_id: str) -> dict:
-        return self._post(f"/api/cards/{card_id}/labels", json={"labelId": label_id})["item"]
+        return self._post(f"/api/cards/{card_id}/card-labels", json={"labelId": label_id})["item"]
 
-    def remove_label_from_card(self, card_id: str, label_id: str) -> dict:
-        return self._delete(f"/api/cards/{card_id}/labels/{label_id}")["item"]
+    def remove_label_from_card(self, card_id: str, card_label_id: str) -> dict:
+        return self._delete(f"/api/card-labels/{card_label_id}")["item"]
+
+    def set_custom_field_value(self, card_id: str, group_id: str, field_id: str, content: str) -> dict:
+        path = f"/api/cards/{card_id}/custom-field-values/customFieldGroupId:{group_id}:customFieldId:{field_id}"
+        return self._patch(path, json={"content": content})["item"]
+
+    def remove_member_from_card(self, card_id: str, user_id: str) -> dict:
+        """Remove a member from a card. Returns the API item payload."""
+        return self._delete(f"/api/cards/{card_id}/members/{user_id}")["item"]
 
     # ------------------------------------------------------------------
     # Comments
