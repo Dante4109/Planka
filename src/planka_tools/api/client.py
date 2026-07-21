@@ -258,6 +258,10 @@ class PlankaClient:
         """Remove a member from a card. Returns the API item payload."""
         return self._delete(f"/api/cards/{card_id}/members/{user_id}")["item"]
 
+    def add_member_to_card(self, card_id: str, user_id: str) -> dict:
+        """Add a member to a card. Mirrors remove_member_from_card's endpoint shape."""
+        return self._post(f"/api/cards/{card_id}/members", json={"userId": user_id})["item"]
+
     # ------------------------------------------------------------------
     # Comments
     # ------------------------------------------------------------------
