@@ -15,20 +15,25 @@ def list_jobs():
     """List all configured automation schedules."""
     scheduler, board_ids = build_scheduler()
 
-    if not board_ids:
+    if board_ids:
+        points_field = _load_env("PLANKA_POINTS_FIELD", "Points")
+        interval = int(_load_env("PLANKA_POLL_INTERVAL", "60"))
+
+        typer.echo(f"Automation: List Point Totals")
+        typer.echo(f"  Field    : {points_field}")
+        typer.echo(f"  Interval : {interval}s")
+    else:
         typer.echo(
             "No boards configured.\n"
             "Set PLANKA_AUTOMATION_BOARDS in .env (comma-separated board IDs)."
         )
+
+    jobs = scheduler.get_jobs()
+    if not jobs:
         return
 
-    points_field = _load_env("PLANKA_POINTS_FIELD", "Points")
-    interval = int(_load_env("PLANKA_POLL_INTERVAL", "60"))
-
-    typer.echo(f"Automation: List Point Totals")
-    typer.echo(f"  Field    : {points_field}")
-    typer.echo(f"  Interval : {interval}s")
-    typer.echo(f"  Boards   :")
-    for job in scheduler.get_jobs():
-        typer.echo(f"    • {job.name}")
+    typer.echo(f"  Jobs     :")
+    for job in jobs:
+        kind = "discovered" if job.id.startswith("jobs_") else "board-sync"
+        typer.echo(f"    • [{kind}] {job.name}")
 
