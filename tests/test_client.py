@@ -167,7 +167,16 @@ class TestEndpointContracts:
         with patch.object(client._session, "delete", return_value=resp) as mock_del:
             client.remove_member_from_card("card-1", "user-1")
         url = mock_del.call_args.args[0]
-        assert url == "http://planka.test/api/cards/card-1/members/user-1"
+        assert url == "http://planka.test/api/cards/card-1/card-memberships/userId:user-1"
+
+    def test_add_member_to_card_uses_post(self):
+        client = self._client()
+        resp = _ok_response({"item": {"id": "cm-1", "cardId": "card-1", "userId": "user-1"}})
+        with patch.object(client._session, "post", return_value=resp) as mock_post:
+            client.add_member_to_card("card-1", "user-1")
+        url = mock_post.call_args.args[0]
+        assert url == "http://planka.test/api/cards/card-1/card-memberships"
+        assert mock_post.call_args.kwargs["json"] == {"userId": "user-1"}
 
     def test_create_card_includes_type_and_list_id(self):
         client = self._client()
