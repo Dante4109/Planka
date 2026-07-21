@@ -247,6 +247,65 @@ pt scheduler list
 
 ---
 
+## Job System — Custom Scheduled & Webhook Jobs
+
+Beyond the built-in list-point-totals automation, you can drop in your own
+job scripts and they'll be picked up automatically — no code changes to
+`planka_tools` required.
+
+**Directory layout:**
+
+```
+src/planka_tools/jobs/
+  base.py          — contract documentation (read this first)
+  loader.py         — auto-discovery (imports .py files, skips malformed ones)
+  Scheduled/        — time-triggered jobs (APScheduler)
+  Webhook/          — event-triggered jobs (Flask webhook receiver)
+```
+
+**Scheduled job contract** — a `.py` file under `jobs/Scheduled/` must define:
+
+```python
+TRIGGER = {"type": "cron", "hour": 8, "minute": 0}   # or {"type": "interval", "hours": 6}
+
+def run(client: PlankaClient) -> None:
+    ...
+```
+
+`TRIGGER["type"]` is `"cron"` or `"interval"`; the remaining keys are passed
+straight through to APScheduler's `CronTrigger`/`IntervalTrigger`.
+
+**Webhook job contract** — a `.py` file under `jobs/Webhook/` must define:
+
+```python
+EVENTS = ["cardUpdate"]   # Planka event names this job subscribes to
+
+def run(event: str, payload: dict, client: PlankaClient) -> None:
+    ...
+```
+
+**Adding a new job:**
+
+1. Create a new `.py` file in `jobs/Scheduled/` or `jobs/Webhook/` following the contract above.
+2. Restart `pt scheduler run` (for Scheduled jobs) or the webhook server (for Webhook jobs) to pick it up.
+3. Run `pt scheduler list` to confirm it shows up, tagged `[discovered]`.
+
+A malformed job file (missing `TRIGGER`/`EVENTS`/`run`, or an error at import
+time) is logged and skipped — it never crashes the scheduler or webhook
+server, and other jobs keep loading normally.
+
+**Environment variables:**
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `AUTO_ASSIGN_USER_ID` | User ID assigned by the `auto_assign_in_progress` example job | none — job no-ops if unset |
+| `JOBS_DIR` | Override the base jobs directory | `src/planka_tools/jobs/` |
+
+**Security note:** job files are imported and executed as Python code. Only
+put trusted scripts in `jobs/Scheduled/` and `jobs/Webhook/`.
+
+---
+
 ## `pt webhook` — Webhook Receiver
 
 Event-driven alternative to the polling scheduler. A lightweight Flask server receives Planka events and updates list titles instantly.
