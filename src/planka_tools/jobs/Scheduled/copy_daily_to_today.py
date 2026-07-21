@@ -33,5 +33,5 @@ def run(client: PlankaClient) -> None:
         # Cross-board move: Planka's card update requires boardId alongside
         # listId when moving to a list on a different board than the card's
         # current one — move_card() only sets listId, so it's not enough here.
-        client.update_card(copy["id"], boardId=dst_board["id"], listId=dst_list["id"])
+        client.update_card(copy["id"], boardId=dst_board["id"], listId=dst_list["id"], position=65536.0)
     log.info("Copied %d card(s) from Daily to Today", len(cards))

@@ -141,7 +141,9 @@ class TestCopyDailyToToday:
         mc.duplicate_card.return_value = {"id": "copy-1"}
         copy_daily_to_today.run(mc)
         mc.duplicate_card.assert_called_once_with("c1")
-        mc.update_card.assert_called_once_with("copy-1", boardId="b-dst", listId="l-today")
+        mc.update_card.assert_called_once_with(
+            "copy-1", boardId="b-dst", listId="l-today", position=65536.0
+        )
 
     def test_missing_source_board_returns_early(self):
         mc = MagicMock()
