@@ -30,5 +30,8 @@ def run(client: PlankaClient) -> None:
     cards = [c for c in client.get_cards(src_board["id"]) if c.get("listId") == src_list["id"]]
     for card in cards:
         copy = client.duplicate_card(card["id"])
-        client.move_card(copy["id"], dst_list["id"])
+        # Cross-board move: Planka's card update requires boardId alongside
+        # listId when moving to a list on a different board than the card's
+        # current one — move_card() only sets listId, so it's not enough here.
+        client.update_card(copy["id"], boardId=dst_board["id"], listId=dst_list["id"])
     log.info("Copied %d card(s) from Daily to Today", len(cards))
