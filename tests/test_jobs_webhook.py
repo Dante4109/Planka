@@ -10,7 +10,9 @@ def _client():
     mc = MagicMock()
     mc.find_project.return_value = {"id": "p1"}
     mc.find_board.return_value = {"id": "b1"}
-    mc.find_list.return_value = {"id": "l-inprog"}
+    # Name carries a point-total suffix, like sync_list_point_totals appends —
+    # base-name matching must still resolve this.
+    mc.get_lists.return_value = [{"id": "l-inprog", "name": "In-Progress (23)"}]
     return mc
 
 
@@ -50,7 +52,7 @@ class TestAutoAssignInProgress:
     def test_no_call_when_list_lookup_fails(self, monkeypatch):
         monkeypatch.setenv("AUTO_ASSIGN_USER_ID", "user-1")
         mc = _client()
-        mc.find_list.return_value = None
+        mc.get_lists.return_value = []
         auto_assign_in_progress.run("cardUpdate", _payload("l-other", "l-inprog"), mc)
         mc.add_member_to_card.assert_not_called()
 

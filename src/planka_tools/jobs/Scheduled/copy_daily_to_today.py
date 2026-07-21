@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from planka_tools.api.client import PlankaClient
+from planka_tools.jobs.list_lookup import find_list_by_base_name
 
 log = logging.getLogger(__name__)
 
@@ -21,8 +22,8 @@ def run(client: PlankaClient) -> None:
     if not src_board or not dst_board:
         log.warning("Source or destination board not found — skipping")
         return
-    src_list = client.find_list(src_board["id"], "Daily")
-    dst_list = client.find_list(dst_board["id"], "Today")
+    src_list = find_list_by_base_name(client, src_board["id"], "Daily")
+    dst_list = find_list_by_base_name(client, dst_board["id"], "Today")
     if not src_list or not dst_list:
         log.warning("List 'Daily' or 'Today' not found — skipping")
         return

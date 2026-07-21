@@ -11,14 +11,22 @@ from planka_tools.jobs.Scheduled import (
 )
 
 
+def _lists_by_board(mapping: dict[str, list[dict]]):
+    """Return a side_effect function for get_lists(board_id), keyed by board_id."""
+    return lambda board_id: mapping.get(board_id, [])
+
+
 class TestMoveTomorrowToToday:
     def _client(self):
         mc = MagicMock()
         mc.find_project.return_value = {"id": "p1"}
         mc.find_board.return_value = {"id": "b1"}
-        mc.find_list.side_effect = lambda board_id, name: {
-            "Tomorrow": {"id": "l-tom"}, "Today": {"id": "l-tod"},
-        }[name]
+        # Names carry a point-total suffix, like sync_list_point_totals appends —
+        # base-name matching must still resolve these.
+        mc.get_lists.return_value = [
+            {"id": "l-tom", "name": "Tomorrow (6)"},
+            {"id": "l-tod", "name": "Today (1)"},
+        ]
         return mc
 
     def test_moves_matching_cards(self):
@@ -48,7 +56,7 @@ class TestMoveTomorrowToToday:
 
     def test_missing_list_returns_early(self):
         mc = self._client()
-        mc.find_list.side_effect = lambda board_id, name: None
+        mc.get_lists.return_value = []
         move_tomorrow_to_today.run(mc)
         mc.get_cards.assert_not_called()
 
@@ -58,9 +66,10 @@ class TestMoveThisMonthToThisWeek:
         mc = MagicMock()
         mc.find_project.return_value = {"id": "p1"}
         mc.find_board.return_value = {"id": "b1"}
-        mc.find_list.side_effect = lambda board_id, name: {
-            "This Month": {"id": "l-m"}, "This Week": {"id": "l-w"},
-        }[name]
+        mc.get_lists.return_value = [
+            {"id": "l-m", "name": "This Month (8)"},
+            {"id": "l-w", "name": "This Week (13)"},
+        ]
         mc.get_cards.return_value = [
             {"id": "c1", "listId": "l-m"},
             {"id": "c2", "listId": "other"},
@@ -80,7 +89,7 @@ class TestSweepPastDue:
         mc = MagicMock()
         mc.find_project.return_value = {"id": "p1"}
         mc.find_board.return_value = {"id": "b1"}
-        mc.find_list.return_value = {"id": "l-pd"}
+        mc.get_lists.return_value = [{"id": "l-pd", "name": "Past-Due"}]
         return mc
 
     def test_moves_only_past_due_not_already_in_list(self):
@@ -98,7 +107,7 @@ class TestSweepPastDue:
         mc = MagicMock()
         mc.find_project.return_value = {"id": "p1"}
         mc.find_board.return_value = {"id": "b1"}
-        mc.find_list.return_value = None
+        mc.get_lists.return_value = []
         sweep_past_due.run(mc)
         mc.get_cards.assert_not_called()
 
@@ -117,9 +126,10 @@ class TestCopyDailyToToday:
         mc.find_board.side_effect = lambda pid, name: {
             "Personal": {"id": "b-src"}, "Daily Workflow": {"id": "b-dst"},
         }[name]
-        mc.find_list.side_effect = lambda bid, name: {
-            "Daily": {"id": "l-daily"}, "Today": {"id": "l-today"},
-        }[name]
+        mc.get_lists.side_effect = _lists_by_board({
+            "b-src": [{"id": "l-daily", "name": "Daily"}],
+            "b-dst": [{"id": "l-today", "name": "Today (1)"}],
+        })
         return mc
 
     def test_copies_and_moves_matching_cards(self):
@@ -142,6 +152,7 @@ class TestCopyDailyToToday:
 
     def test_missing_list_returns_early(self):
         mc = self._client()
-        mc.find_list.side_effect = lambda bid, name: None
+        mc.get_lists.side_effect = None
+        mc.get_lists.return_value = []
         copy_daily_to_today.run(mc)
         mc.get_cards.assert_not_called()

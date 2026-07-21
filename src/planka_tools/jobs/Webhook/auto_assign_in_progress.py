@@ -6,6 +6,7 @@ import logging
 import os
 
 from planka_tools.api.client import PlankaClient
+from planka_tools.jobs.list_lookup import find_list_by_base_name
 
 log = logging.getLogger(__name__)
 
@@ -27,11 +28,16 @@ def run(event: str, payload: dict, client: PlankaClient) -> None:
     if old_list_id == new_list_id:
         return
     project = client.find_project("Trello Import")
-    board = client.find_board(project["id"], "Daily Workflow") if project else None
-    if not board or board["id"] != board_id:
+    if not project:
+        log.debug("Project 'Trello Import' not found — skipping auto-assign")
         return
-    target_list = client.find_list(board["id"], "In-Progress")
+    board = client.find_board(project["id"], "Daily Workflow")
+    if not board or board["id"] != board_id:
+        log.debug("Card's board is not Daily Workflow — skipping auto-assign")
+        return
+    target_list = find_list_by_base_name(client, board["id"], "In-Progress")
     if not target_list or target_list["id"] != new_list_id:
+        log.debug("Card was not moved to In-Progress — skipping auto-assign")
         return
     client.add_member_to_card(card_id, user_id)
     log.info("Assigned user %s to card %s (moved to In-Progress)", user_id, card_id)

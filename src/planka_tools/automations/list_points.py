@@ -29,6 +29,11 @@ from planka_tools.api.client import PlankaClient
 _POINTS_SUFFIX = re.compile(r"\s*\(\d+(?:\.\d+)?\)$")
 
 
+def strip_points_suffix(name: str) -> str:
+    """Remove a trailing point-total suffix (e.g. "In-Progress (23)" -> "In-Progress")."""
+    return _POINTS_SUFFIX.sub("", name).strip()
+
+
 @dataclass
 class ListUpdate:
     list_id: str

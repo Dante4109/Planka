@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timezone
 
 from planka_tools.api.client import PlankaClient
+from planka_tools.jobs.list_lookup import find_list_by_base_name
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def run(client: PlankaClient) -> None:
     if not board:
         log.warning("Board 'Daily Workflow' not found — skipping")
         return
-    dst_list = client.find_list(board["id"], "Past-Due")
+    dst_list = find_list_by_base_name(client, board["id"], "Past-Due")
     if not dst_list:
         log.warning("List 'Past-Due' not found — skipping")
         return
