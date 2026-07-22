@@ -28,7 +28,7 @@ class TestCardMoveSuccess:
         mc = MagicMock()
         mc.move_card.return_value = {"id": CARD_ID, "listId": LIST_ID, "boardId": BOARD_ID}
         with _patch_client(mc):
-            result = runner.invoke(app, ["--card", CARD_ID, "--list", LIST_ID])
+            result = runner.invoke(app, ["move", "--card", CARD_ID, "--list", LIST_ID])
         assert result.exit_code == 0, result.output
         mc.move_card.assert_called_once_with(CARD_ID, LIST_ID)
 
@@ -36,7 +36,7 @@ class TestCardMoveSuccess:
         mc = MagicMock()
         mc.move_card.return_value = {"id": CARD_ID, "listId": LIST_ID, "boardId": BOARD_ID}
         with _patch_client(mc):
-            result = runner.invoke(app, ["--card", CARD_ID, "--list", LIST_ID])
+            result = runner.invoke(app, ["move", "--card", CARD_ID, "--list", LIST_ID])
         assert CARD_ID in result.output
         assert LIST_ID in result.output
 
@@ -44,25 +44,25 @@ class TestCardMoveSuccess:
         mc = MagicMock()
         mc.move_card.return_value = {"id": CARD_ID, "listId": LIST_ID}
         with _patch_client(mc):
-            result = runner.invoke(app, ["-c", CARD_ID, "-l", LIST_ID])
+            result = runner.invoke(app, ["move", "-c", CARD_ID, "-l", LIST_ID])
         assert result.exit_code == 0, result.output
         mc.move_card.assert_called_once_with(CARD_ID, LIST_ID)
 
 
 class TestCardMoveErrors:
     def test_missing_card_option_errors(self):
-        result = runner.invoke(app, ["--list", LIST_ID])
+        result = runner.invoke(app, ["move", "--list", LIST_ID])
         assert result.exit_code != 0
 
     def test_missing_list_option_errors(self):
-        result = runner.invoke(app, ["--card", CARD_ID])
+        result = runner.invoke(app, ["move", "--card", CARD_ID])
         assert result.exit_code != 0
 
     def test_api_error_exits_1(self):
         mock_cls = MagicMock()
         mock_cls.return_value.__enter__.side_effect = PlankaError(404, "E_NOT_FOUND", "Card not found")
         with patch("planka_tools.card.commands.PlankaClient", mock_cls):
-            result = runner.invoke(app, ["--card", CARD_ID, "--list", LIST_ID])
+            result = runner.invoke(app, ["move", "--card", CARD_ID, "--list", LIST_ID])
         assert result.exit_code == 1
         assert "API error" in result.output
 
@@ -70,6 +70,6 @@ class TestCardMoveErrors:
         mc = MagicMock()
         mc.move_card.side_effect = RuntimeError("boom")
         with _patch_client(mc):
-            result = runner.invoke(app, ["--card", CARD_ID, "--list", LIST_ID])
+            result = runner.invoke(app, ["move", "--card", CARD_ID, "--list", LIST_ID])
         assert result.exit_code == 1
         assert "Unexpected error" in result.output

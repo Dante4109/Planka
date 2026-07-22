@@ -188,6 +188,10 @@ class PlankaClient:
         """Return all lists on a board."""
         return self._get(f"/api/boards/{board_id}").get("included", {}).get("lists", [])
 
+    def get_list(self, list_id: str) -> dict:
+        """Return a single list by ID (includes boardId)."""
+        return self._get(f"/api/lists/{list_id}")["item"]
+
     def create_list(self, board_id: str, name: str, position: float = 65536.0) -> dict:
         return self._post(f"/api/boards/{board_id}/lists",
                           json={"name": name, "position": position})["item"]
