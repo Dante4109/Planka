@@ -188,6 +188,10 @@ class PlankaClient:
         """Return all lists on a board."""
         return self._get(f"/api/boards/{board_id}").get("included", {}).get("lists", [])
 
+    def get_list(self, list_id: str) -> dict:
+        """Return a single list by ID (includes boardId)."""
+        return self._get(f"/api/lists/{list_id}")["item"]
+
     def create_list(self, board_id: str, name: str, position: float = 65536.0) -> dict:
         return self._post(f"/api/boards/{board_id}/lists",
                           json={"name": name, "position": position})["item"]
@@ -256,7 +260,11 @@ class PlankaClient:
 
     def remove_member_from_card(self, card_id: str, user_id: str) -> dict:
         """Remove a member from a card. Returns the API item payload."""
-        return self._delete(f"/api/cards/{card_id}/members/{user_id}")["item"]
+        return self._delete(f"/api/cards/{card_id}/card-memberships/userId:{user_id}")["item"]
+
+    def add_member_to_card(self, card_id: str, user_id: str) -> dict:
+        """Add a member to a card. Returns the API item payload."""
+        return self._post(f"/api/cards/{card_id}/card-memberships", json={"userId": user_id})["item"]
 
     # ------------------------------------------------------------------
     # Comments

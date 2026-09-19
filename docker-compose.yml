@@ -42,6 +42,20 @@ services:
       retries: 3
       start_period: 15s
 
+  planka-scheduler:
+    build: .
+    container_name: planka-scheduler
+    restart: unless-stopped
+    command: ["python", "-c", "from planka_tools.scheduler.runner import run_scheduler; run_scheduler()"]
+    env_file:
+      - .env
+    environment:
+      # Override BASE_URL with the Docker-internal address so the scheduler container
+      # can reach the Planka API without going through the host network.
+      - PLANKA_INTERNAL_URL=http://planka:1337
+    depends_on:
+      - planka
+
 volumes:
   planka_user_avatars:
   planka_project_backgrounds:

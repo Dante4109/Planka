@@ -18,12 +18,21 @@ Planka event payload shape:
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
 from planka_tools.api.client import PlankaClient
 from planka_tools.automations.list_points import sync_list_point_totals
+from planka_tools.jobs import loader
 
 log = logging.getLogger(__name__)
+
+
+def _jobs_dir() -> Path:
+    """Base directory for discovered job scripts (Scheduled/, Webhook/ subdirs)."""
+    override = os.environ.get("JOBS_DIR")
+    return Path(override) if override else Path(__file__).resolve().parents[1] / "jobs"
 
 
 def _board_id_from_custom_field_event(payload: dict[str, Any]) -> str | None:
@@ -62,6 +71,14 @@ def handle_event(event: str, payload: dict[str, Any], client: PlankaClient) -> N
         cardUpdate              — Card moved between lists (detect via prevData)
         cardDelete              — Card removed (recompute source list totals)
     """
+    for module in loader.load_webhook_jobs(_jobs_dir() / "Webhook"):
+        if event not in getattr(module, "EVENTS", []):
+            continue
+        try:
+            module.run(event, payload, client)
+        except Exception as exc:
+            log.error("Webhook job %s failed on event '%s': %s", module.__name__, event, exc)
+
     board_id: str | None = None
 
     if event in ("customFieldValueUpdate", "customFieldValueDelete"):

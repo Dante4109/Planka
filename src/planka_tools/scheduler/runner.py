@@ -21,10 +21,12 @@ import sys
 from pathlib import Path
 
 from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from planka_tools.api.client import PlankaClient, PlankaError
 from planka_tools.automations.list_points import sync_list_point_totals
+from planka_tools.jobs import loader
 
 log = logging.getLogger(__name__)
 
@@ -64,13 +66,58 @@ def _make_job(board_id: str, points_field: str):
     return job
 
 
+def _jobs_dir() -> Path:
+    """Base directory for discovered job scripts (Scheduled/, Webhook/ subdirs)."""
+    override = _load_env("JOBS_DIR")
+    return Path(override) if override else Path(__file__).resolve().parents[1] / "jobs"
+
+
+def _make_scheduled_job_runner(module):
+    """Return a scheduler job function that runs a discovered job module's run(client)."""
+
+    def job():
+        log.info("Running discovered job '%s' ...", module.__name__)
+        try:
+            with PlankaClient() as client:
+                module.run(client)
+        except PlankaError as e:
+            log.error("API error in job %s: %s", module.__name__, e)
+        except Exception as e:
+            log.error("Unexpected error in job %s: %s", module.__name__, e)
+
+    job.__name__ = f"jobs_{module.__name__}"
+    return job
+
+
+def load_and_register_jobs(scheduler: BlockingScheduler, jobs_dir: Path) -> list[str]:
+    """Discover Scheduled job modules under jobs_dir and register them with the scheduler."""
+    registered = []
+    for module in loader.load_scheduled_jobs(jobs_dir / "Scheduled"):
+        trig = dict(module.TRIGGER)
+        trig_type = trig.pop("type", "cron")
+        trigger = CronTrigger(**trig) if trig_type == "cron" else IntervalTrigger(**trig)
+        job_id = f"jobs_{module.__name__}"
+        scheduler.add_job(
+            _make_scheduled_job_runner(module),
+            trigger=trigger,
+            id=job_id,
+            name=module.__name__,
+            max_instances=1,
+            coalesce=True,
+        )
+        registered.append(job_id)
+    return registered
+
+
 def build_scheduler() -> tuple[BlockingScheduler, list[str]]:
     """Build and return a configured scheduler and the list of board IDs registered."""
     raw_boards = _load_env("PLANKA_AUTOMATION_BOARDS")
     board_ids = [b.strip() for b in raw_boards.split(",") if b.strip()]
 
     if not board_ids:
-        return BlockingScheduler(), []
+        scheduler = BlockingScheduler()
+        load_and_register_jobs(scheduler, _jobs_dir())
+        return scheduler, []
 
     points_field = _load_env("PLANKA_POINTS_FIELD", "Points")
     interval = int(_load_env("PLANKA_POLL_INTERVAL", "60"))
@@ -87,6 +134,8 @@ def build_scheduler() -> tuple[BlockingScheduler, list[str]]:
             next_run_time=__import__("datetime").datetime.now(),  # run immediately on start
         )
 
+    load_and_register_jobs(scheduler, _jobs_dir())
+
     return scheduler, board_ids
 
 
@@ -100,10 +149,13 @@ def run_scheduler() -> None:
 
     scheduler, board_ids = build_scheduler()
 
-    if not board_ids:
+    discovered_jobs = [j for j in scheduler.get_jobs() if j.id.startswith("jobs_")]
+
+    if not board_ids and not discovered_jobs:
         log.error(
-            "No boards configured. Set PLANKA_AUTOMATION_BOARDS in .env "
-            "(comma-separated board IDs)."
+            "No boards configured and no discovered jobs found. Set "
+            "PLANKA_AUTOMATION_BOARDS in .env (comma-separated board IDs) or "
+            "add a job script under jobs/Scheduled/."
         )
         sys.exit(1)
 
@@ -111,9 +163,12 @@ def run_scheduler() -> None:
     interval = int(_load_env("PLANKA_POLL_INTERVAL", "60"))
 
     log.info("Starting Planka automation scheduler")
-    log.info("  Boards : %s", ", ".join(board_ids))
-    log.info("  Field  : %s", points_field)
-    log.info("  Interval: %ds", interval)
+    if board_ids:
+        log.info("  Boards : %s", ", ".join(board_ids))
+        log.info("  Field  : %s", points_field)
+        log.info("  Interval: %ds", interval)
+    if discovered_jobs:
+        log.info("  Discovered jobs: %s", ", ".join(j.name for j in discovered_jobs))
     log.info("Press Ctrl+C to stop.")
 
     def _shutdown(signum, frame):
