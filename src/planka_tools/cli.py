@@ -8,6 +8,7 @@ from planka_tools.webhook import commands as webhook_commands
 from planka_tools.export import commands as export_commands
 from planka_tools.card import commands as card_commands
 import sys
+from planka_tools.env import select as select_env
 from planka_tools.shortcuts import expand as expand_shortcut
 
 app = typer.Typer(
@@ -41,8 +42,31 @@ def UpdateBoard(board: str = typer.Option(..., "--Board", "-B", help="Board ID")
 
 
 
+def _extract_env_option(argv: list[str]) -> list[str]:
+    """Pull a global --env/-e NAME out of argv (anywhere) and select that env file."""
+    out, i = [], 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg in ("--env", "-e") and i + 1 < len(argv):
+            name, i = argv[i + 1], i + 2
+        elif arg.startswith("--env="):
+            name, i = arg.split("=", 1)[1], i + 1
+        else:
+            out.append(arg)
+            i += 1
+            continue
+        try:
+            select_env(name)
+        except FileNotFoundError as e:
+            typer.echo(str(e), err=True)
+            raise SystemExit(1)
+    return out
+
+
 def main():
-    app(args=expand_shortcut(sys.argv[1:]))
+    # Shortcuts may themselves contain --env, so extract again after expanding.
+    args = _extract_env_option(expand_shortcut(_extract_env_option(sys.argv[1:])))
+    app(args=args)
 
 
 if __name__ == "__main__":

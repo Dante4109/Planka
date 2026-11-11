@@ -30,20 +30,7 @@ from urllib.parse import urlparse
 
 import requests
 
-_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
-
-
-def _load_env(key: str) -> Optional[str]:
-    """Read a key from .env, falling back to the real environment."""
-    val = os.environ.get(key)
-    if val:
-        return val
-    if _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text().splitlines():
-            line = line.strip()
-            if line.startswith(f"{key}="):
-                return line.split("=", 1)[1]
-    return None
+from planka_tools.env import load_env as _load_env
 
 
 class PlankaError(Exception):

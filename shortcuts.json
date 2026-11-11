@@ -1,3 +1,4 @@
 {
-  "done": "card move-all -p 'Trello Import Dev' -b 'Daily Workflow' -l {} -l Done"
+  "done": "card move-all -p 'Trello Import Dev' -b 'Daily Workflow' -l {} -l Done",
+  "done-win": "--env test.mephistopheles card move-all -p 'Trello Import' -b 'Daily Workflow' -l {} -l {} -c {}"
 }

@@ -3,7 +3,7 @@ Card commands.
 
 Commands:
   pt card move --card <card-id> --list <list-id>
-  pt card move-all [-p <proj>] [-b <board>] -l <list> [-p <proj>] [-b <board>] -l <list>
+  pt card move-all [-p <proj>] [-b <board>] -l <list> [-p <proj>] [-b <board>] -l <list> [-c <card name>]...
       (first of each = source, second = destination; destination project/board default to the source's)
   pt card list --list <list-id>
   pt card list --board <board-id>
@@ -149,11 +149,13 @@ def run_move_all(
     project: Optional[list[str]],
     board: Optional[list[str]],
     list_: Optional[list[str]],
+    card: Optional[list[str]] = None,
 ) -> None:
-    """Move every card in a source list to a destination list.
+    """Move every card in a source list (or only the named cards) to a destination list.
 
     Each argument holds up to two values: [source, destination]. Destination project and
-    board default to the source's; the destination list is required. Echoes the result and
+    board default to the source's; the destination list is required. `card` limits the move to
+    cards with those names (case-insensitive, exact) or ids; every one must be found. Echoes the result and
     raises typer.Exit(1) on any error. Shared by `move-all` and by shortcuts.
     """
     try:
@@ -199,6 +201,25 @@ def run_move_all(
                 (c for c in client.get_cards(src_board_id) if c.get("listId") == src_id),
                 key=_position,
             )
+            if card:
+                wanted = [w.casefold() for w in card]
+                missing = [
+                    w for w in card
+                    if not any(
+                        (c.get("name") or "").casefold() == w.casefold() or c.get("id") == w
+                        for c in cards
+                    )
+                ]
+                if missing:
+                    names = ", ".join(f'"{c.get("name")}"' for c in cards if c.get("name"))
+                    raise _LookupError(
+                        f"card(s) not found in source list: {', '.join(repr(m) for m in missing)}. "
+                        f"Cards in this list: {names or '(none)'}"
+                    )
+                cards = [
+                    c for c in cards
+                    if (c.get("name") or "").casefold() in wanted or c.get("id") in card
+                ]
             if not cards:
                 typer.echo(f"No cards in list {src_id}; nothing to move")
                 return
@@ -242,8 +263,12 @@ def move_all_cards(
         None, "--list", "-l",
         help="List name or ID. First = source, second = destination (both required).",
     ),
+    card: Optional[list[str]] = typer.Option(
+        None, "--card", "-c",
+        help="Only move cards with this name (or ID). Repeatable; default: all cards in the list.",
+    ),
 ):
-    """Move every card in a list to another list.
+    """Move every card in a list (or only cards matching --card) to another list.
 
     --project, --board and --list can each be given twice: the first is the source, the
     second the destination. Project and board left out of the destination are taken from
@@ -252,8 +277,9 @@ def move_all_cards(
     \b
     pt card move-all -p "Proj" -b "Board" -l "this month" -l "Done"
     pt card move-all -p "Proj" -b "Board" -l "this month" -b "Other board" -l "Done"
+    pt card move-all -p "Proj" -b "Board" -l "this month" -l "Done" -c "Write report"
     """
-    run_move_all(project, board, list_)
+    run_move_all(project, board, list_, card)
 
 
 @app.command("copy")
