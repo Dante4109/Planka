@@ -1,0 +1,3 @@
+{
+  "done": "card move-all -p 'Trello Import Dev' -b 'Daily Workflow' -l {} -l Done"
+}
