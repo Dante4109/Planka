@@ -25,24 +25,14 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from planka_tools.api.client import PlankaClient, PlankaError
+from planka_tools.env import load_env
 from planka_tools.automations.list_points import sync_list_point_totals
 from planka_tools.jobs import loader
 
 log = logging.getLogger(__name__)
 
-_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
-
-
 def _load_env(key: str, default: str = "") -> str:
-    val = os.environ.get(key)
-    if val:
-        return val
-    if _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text().splitlines():
-            line = line.strip()
-            if line.startswith(f"{key}="):
-                return line.split("=", 1)[1]
-    return default
+    return load_env(key, default)
 
 
 def _make_job(board_id: str, points_field: str):

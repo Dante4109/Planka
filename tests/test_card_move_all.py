@@ -239,3 +239,20 @@ def test_empty_list_is_noop():
         result = runner.invoke(app, ["move-all", "--list", "src", "--list", "done"])
     assert result.exit_code == 0
     mc.move_card.assert_not_called()
+
+
+def test_card_name_filter_moves_only_named_card():
+    mc = _client()
+    CARDS["b1"][1]["name"] = "Write report"
+    CARDS["b1"][0]["name"] = "Other"
+    with _patch_client(mc):
+        result = runner.invoke(app, ["move-all", "-l", "src", "-l", "done", "-c", "write REPORT"])
+    assert result.exit_code == 0, result.output
+    assert _moves(mc) == [("c1", "done")]
+
+
+def test_card_name_not_found_moves_nothing():
+    mc, result = _run("-l", "src", "-l", "done", "-c", "nope")
+    assert result.exit_code == 1
+    assert "not found in source list" in result.output
+    mc.move_card.assert_not_called()
