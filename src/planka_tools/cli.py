@@ -7,6 +7,8 @@ from planka_tools.automations import commands as automation_commands
 from planka_tools.webhook import commands as webhook_commands
 from planka_tools.export import commands as export_commands
 from planka_tools.card import commands as card_commands
+import sys
+from planka_tools.shortcuts import expand as expand_shortcut
 
 app = typer.Typer(
     name="pt",
@@ -40,7 +42,7 @@ def UpdateBoard(board: str = typer.Option(..., "--Board", "-B", help="Board ID")
 
 
 def main():
-    app()
+    app(args=expand_shortcut(sys.argv[1:]))
 
 
 if __name__ == "__main__":
